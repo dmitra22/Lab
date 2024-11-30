@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Chat</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        #messages { height: 80vh; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; }
+        #input { width: calc(100% - 50px); padding: 10px; }
+    </style>
+</head>
+<body>
+    <div id="messages"></div>
+    <input id="input" placeholder="Type a message..." />
+    <script>
+        const ws = new WebSocket(`ws://${location.host}`);
+
+        const messages = document.getElementById("messages");
+        const input = document.getElementById("input");
+
+        ws.onmessage = (event) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+                const msg = document.createElement("div");
+                msg.textContent = reader.result; // Display the decoded message
+                messages.appendChild(msg);
+            };
+            reader.readAsText(event.data); // Convert Blob to text
+        };
+
+
+        input.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                ws.send(input.value);
+                input.value = "";
+            }
+        });
+    </script>
+</body>
+</html>
