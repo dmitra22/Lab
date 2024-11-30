@@ -8,8 +8,8 @@ const wss = new WebSocket.Server({ port: 3001 });
 const db = new sqlite3.Database("./chat_app.db");
 
 // Middleware
-app.use(express.json());
-
+//app.use(express.json());
+app.use(express.static("public"));
 // Import registration module
 require("./register")(app, db);
 
