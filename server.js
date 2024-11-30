@@ -40,4 +40,4 @@ wss.on("connection", (ws) => {
     });
 });
 
-app.listen(6969, () => console.log("Server started on http://localhost:6969"));
+app.listen(3000, () => console.log("Server started on http://localhost:3000"));
