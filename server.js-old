@@ -1,19 +1,17 @@
 const express = require("express");
 const WebSocket = require("ws");
 const sqlite3 = require("sqlite3").verbose();
+const bcrypt = require("bcrypt");
 
 const app = express();
 const wss = new WebSocket.Server({ port: 3001 });
 
 const db = new sqlite3.Database("./chat_app.db");
 
-// Middleware
-app.use(express.json());
+//app.use(express.json()); // For parsing JSON data
+app.use(express.static("public"));
 
-// Import registration module
-require("./register")(app, db);
-
-// User login route
+// User login
 app.post("/login", (req, res) => {
     const { username, password } = req.body;
     db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
@@ -25,13 +23,15 @@ app.post("/login", (req, res) => {
     });
 });
 
-// WebSocket for chat messages
+let connectedUsers = {};
+
+// WebSocket connection
 wss.on("connection", (ws) => {
     ws.on("message", (data) => {
         const message = JSON.parse(data);
         const { username, text } = message;
 
-        // Broadcast message to all clients
+        // Broadcast to all connected clients
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({ username, text }));
