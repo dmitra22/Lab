@@ -1,39 +1,63 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Simple Chat</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-        #messages { height: 80vh; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 10px; }
-        #input { width: calc(100% - 50px); padding: 10px; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
 </head>
 <body>
-    <div id="messages"></div>
-    <input id="input" placeholder="Type a message..." />
+    <div id="login">
+        <h2>Login</h2>
+        <input type="text" id="username" placeholder="Username" />
+        <input type="password" id="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+    </div>
+
+    <div id="chat" style="display:none;">
+        <h2>Chat</h2>
+        <div id="messages"></div>
+        <input type="text" id="message" placeholder="Type a message" />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
     <script>
-        const ws = new WebSocket(`ws://${location.host}`);
+        let ws;
+        let username;
 
-        const messages = document.getElementById("messages");
-        const input = document.getElementById("input");
+        function login() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
 
-        ws.onmessage = (event) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-                const msg = document.createElement("div");
-                msg.textContent = reader.result; // Display the decoded message
-                messages.appendChild(msg);
-            };
-            reader.readAsText(event.data); // Convert Blob to text
-        };
+            fetch("http://localhost:3000/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username: user, password: pass }),
+            })
+            .then((response) => response.json())
+            .then((data) => {
+                if (data.success) {
+                    username = data.username;
+                    document.getElementById("login").style.display = "none";
+                    document.getElementById("chat").style.display = "block";
 
+                    ws = new WebSocket("ws://localhost:3001");
+                    ws.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        const messageDiv = document.createElement("div");
+                        messageDiv.textContent = `${msg.username}: ${msg.text}`;
+                        document.getElementById("messages").appendChild(messageDiv);
+                    };
+                } else {
+                    alert("Login failed!");
+                }
+            });
+        }
 
-        input.addEventListener("keypress", (e) => {
-            if (e.key === "Enter") {
-                ws.send(input.value);
-                input.value = "";
-            }
-        });
+        function sendMessage() {
+            const text = document.getElementById("message").value;
+            ws.send(JSON.stringify({ username, text }));
+            document.getElementById("message").value = "";
+        }
     </script>
 </body>
 </html>

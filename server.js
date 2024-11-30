@@ -1,32 +1,42 @@
 const express = require("express");
 const WebSocket = require("ws");
-const http = require("http");
-const path = require("path");
+const sqlite3 = require("sqlite3").verbose();
+const bcrypt = require("bcrypt");
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({ port: 3001 });
 
-// Serve the static frontend
-app.use(express.static("public"));
+const db = new sqlite3.Database("./chat_app.db");
 
+app.use(express.json()); // For parsing JSON data
 
-app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "public", "index.html"));
+// User login
+app.post("/login", (req, res) => {
+    const { username, password } = req.body;
+    db.get("SELECT * FROM users WHERE username = ?", [username], (err, user) => {
+        if (err) return res.status(500).json({ error: "Database error" });
+        if (!user || !bcrypt.compareSync(password, user.password)) {
+            return res.status(401).json({ error: "Invalid credentials" });
+        }
+        res.json({ success: true, username });
+    });
 });
 
-// WebSocket connection handling
+let connectedUsers = {};
+
+// WebSocket connection
 wss.on("connection", (ws) => {
-    ws.on("message", (message) => {
-        // Broadcast to all clients
+    ws.on("message", (data) => {
+        const message = JSON.parse(data);
+        const { username, text } = message;
+
+        // Broadcast to all connected clients
         wss.clients.forEach((client) => {
             if (client.readyState === WebSocket.OPEN) {
-                client.send(message);
+                client.send(JSON.stringify({ username, text }));
             }
         });
     });
 });
 
-server.listen(6969, () => {
-    console.log("Server started on http://localhost:6969");
-});
+app.listen(6969, () => console.log("Server started on http://localhost:6969"));
